@@ -1,9 +1,7 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
-#if SPM
 import OOGMoya
-#endif
 import Moya
 
 public typealias OOGMoyaMethod = Moya.Method
