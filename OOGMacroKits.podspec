@@ -24,7 +24,7 @@ Pod::Spec.new do |s|
     :execution_position => :before_compile
   }
   
-  s.xcconfig = {
+  s.user_target_xcconfig = {
     'OTHER_SWIFT_FLAGS' => "-load-plugin-executable $(PODS_ROOT)/#{s.name}/Macro/release/OOGMacros#OOGMacros"
   }
   
