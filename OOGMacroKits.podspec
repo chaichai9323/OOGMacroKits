@@ -12,13 +12,14 @@ Pod::Spec.new do |s|
   s.swift_version = '5.9'
   
   s.preserve_paths = 'Package.swift', 'Sources'
-  
+  s.source_files = "Sources/OOGMacroKits/Test.swift"
+    
   script = <<-SCRIPT
   env -i PATH="$PATH" "$SHELL" -l -c "swift build -v -c release --package-path $PODS_TARGET_SRCROOT --scratch-path $PODS_ROOT/#{s.name}/Macro"
   SCRIPT
   
   s.script_phase = {
-    :name => 'Build OOGMoya macro plugin',
+    :name => 'Build OOGMacros plugin',
     :script => script,
     :execution_position => :before_compile
   }
@@ -26,14 +27,5 @@ Pod::Spec.new do |s|
   s.xcconfig = {
     'OTHER_SWIFT_FLAGS' => "-load-plugin-executable $(PODS_ROOT)/#{s.name}/Macro/release/OOGMacros#OOGMacros"
   }
-  
-  s.subspec 'Moya' do | moya |
-    moya.source_files = "Sources/OOGMacroKits/Moya.swift"
-    moya.dependency 'OOGMoya', '~> 16.1'
-  end
-
-  s.subspec 'Test' do | test |
-    test.source_files = "Sources/OOGMacroKits/Test.swift"
-  end
   
 end

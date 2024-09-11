@@ -11,9 +11,38 @@ import OOGMacros
 let testMacros: [String: Macro.Type] = [
     "stringify": StringifyMacro.self,
 ]
+
+@freestanding(expression)
+public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "OOGMacros", type: "StringifyMacro")
+
+@freestanding(expression)
+public macro URL(_ value: String) -> URL? = #externalMacro(module: "OOGMacros", type: "URLMacro")
+
 #endif
 
 final class OOGMacroKitsTests: XCTestCase {
+
+#if canImport(OOGMacros)
+    func testResult() {
+        let a = 1
+        let b = 2
+        let (v, s) = #stringify(a + b)
+        XCTAssert(v == 3)
+        XCTAssert(s == "a + b")
+    }
+    
+    func testResult2() {
+        let str = "https://www.abc.com/api"
+        if let url = #URL(str) {
+            XCTAssert(url.scheme == "https")
+            XCTAssert(url.host == "www.abc.com")
+            XCTAssert(url.path == "/api")
+        } else {
+            XCTAssert(false)
+        }
+    }
+#endif
+
     func testMacro() throws {
         #if canImport(OOGMacros)
         assertMacroExpansion(
