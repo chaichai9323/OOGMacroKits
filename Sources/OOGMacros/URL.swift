@@ -10,9 +10,9 @@ import Foundation
 import SwiftSyntax
 import SwiftSyntaxMacros
 
-struct URLMacro: ExpressionMacro {
+public struct URLMacro: ExpressionMacro {
     
-    static func expansion(
+    public static func expansion(
         of node: some FreestandingMacroExpansionSyntax,
         in context: some MacroExpansionContext
     ) throws -> ExprSyntax {
@@ -22,6 +22,22 @@ struct URLMacro: ExpressionMacro {
         }
         
         return "URL(string: \(raw: arg.description))"
+    }
+    
+}
+
+public struct FileURLMacro: ExpressionMacro {
+    
+    public static func expansion(
+        of node: some FreestandingMacroExpansionSyntax,
+        in context: some MacroExpansionContext
+    ) throws -> ExprSyntax {
+        
+        guard let arg = node.argumentList.first?.expression else {
+            fatalError("没有参数")
+        }
+        
+        return "URL(fileURLWithPath: \(raw: arg.description))"
     }
     
 }

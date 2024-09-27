@@ -6,7 +6,7 @@ struct OOGMacroKitsPlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
         StringifyMacro.self,
         URLMacro.self,
-        
+        FileURLMacro.self,
         
         MoyaConfigMacro.self,
         MoyaPathMacro.self,

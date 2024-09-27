@@ -10,6 +10,8 @@ import OOGMacros
 
 let testMacros: [String: Macro.Type] = [
     "stringify": StringifyMacro.self,
+    "MakeModel": MakeModelMacro.self,
+    "URL": URLMacro.self
 ]
 
 @freestanding(expression)
@@ -17,6 +19,9 @@ public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "O
 
 @freestanding(expression)
 public macro URL(_ value: String) -> URL? = #externalMacro(module: "OOGMacros", type: "URLMacro")
+
+@freestanding(expression)
+public macro FileURL(_ value: String) -> URL = #externalMacro(module: "OOGMacros", type: "FileURLMacro")
 
 #endif
 
@@ -29,6 +34,9 @@ final class OOGMacroKitsTests: XCTestCase {
         let (v, s) = #stringify(a + b)
         XCTAssert(v == 3)
         XCTAssert(s == "a + b")
+        
+        let u = #FileURL("/ab/s/f.txt")
+        
     }
     
     func testResult2() {
