@@ -358,6 +358,27 @@ extension \(type.trimmed): OOGTargetType {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        
+        let request = """
+        func request<T: Decodable>(_ type: T.Type) async throws ->  T {
+            return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<T, Error>) in
+                Self.provider.request(self) { result in
+                    switch result {
+                        case .success(let response):
+                            do {
+                                let res = try response.map(type)
+                                continuation.resume(returning: res)
+                            } catch {
+                                continuation.resume(throwing: error)
+                            }
+                        case .failure(let error):
+                            continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+        """
+        
         let model = """
         
         func requestModel<T: Codable>(_ model: T.Type) async throws -> T {
@@ -371,7 +392,7 @@ extension \(type.trimmed): OOGTargetType {
             return try await Self.provider.requestModelList(self, modelType: model)
         }
         """
-        let res = [model, list].compactMap{DeclSyntax("\(raw: $0)")}
+        let res = [request, model, list].compactMap{DeclSyntax("\(raw: $0)")}
         return res
     }
     
