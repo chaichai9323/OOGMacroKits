@@ -7,6 +7,7 @@ struct OOGMacroKitsPlugin: CompilerPlugin {
         StringifyMacro.self,
         URLMacro.self,
         FileURLMacro.self,
+        LocalizedMacro.self,
         
         MoyaConfigMacro.self,
         MoyaPathMacro.self,

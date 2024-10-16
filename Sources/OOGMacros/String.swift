@@ -31,3 +31,18 @@ public struct StringifyMacro: ExpressionMacro {
         return "(\(argument), \(literal: argument.description))"
     }
 }
+
+public struct LocalizedMacro: ExpressionMacro {
+    public static func expansion(
+        of node: some FreestandingMacroExpansionSyntax,
+        in context: some MacroExpansionContext
+    ) -> ExprSyntax {
+        guard let arg = node.argumentList.first?.expression else {
+            fatalError("没有参数")
+        }
+        
+        return "String(localized: \(raw: arg.description), bundle: Localized.bundle())"
+        
+    }
+}
+
