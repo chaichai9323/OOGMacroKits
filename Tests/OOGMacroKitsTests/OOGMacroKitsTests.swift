@@ -10,8 +10,9 @@ import OOGMacros
 
 let testMacros: [String: Macro.Type] = [
     "stringify": StringifyMacro.self,
-    "MakeModel": MakeModelMacro.self,
-    "URL": URLMacro.self
+    "URL": URLMacro.self,
+    "EnumLocalized": EnumLocalizedMacro.self,
+    "EnumStringLocalized": EnumStringLocalizedMacro.self
 ]
 
 @freestanding(expression)
@@ -22,6 +23,18 @@ public macro URL(_ value: String) -> URL? = #externalMacro(module: "OOGMacros", 
 
 @freestanding(expression)
 public macro FileURL(_ value: String) -> URL = #externalMacro(module: "OOGMacros", type: "FileURLMacro")
+
+@attached(extension, names: arbitrary)
+public macro EnumLocalized(_ name: String) = #externalMacro(
+    module: "OOGMacros",
+    type: "EnumLocalizedMacro"
+)
+
+@attached(extension, names: arbitrary)
+public macro EnumStringLocalized() = #externalMacro(
+    module: "OOGMacros",
+    type: "EnumStringLocalizedMacro"
+)
 
 #endif
 
@@ -67,6 +80,45 @@ final class OOGMacroKitsTests: XCTestCase {
         #endif
     }
 
+    func testLocalizedMacro() throws {
+        assertMacroExpansion(
+        """
+        @EnumStringLocalized
+        enum Section: String {
+            case first = "一"
+            case second = "二"
+            case third = "三"
+            case fourth = "四"
+        }
+        """,
+        expandedSource:
+        """
+        enum Section: String {
+            case first = "一"
+            case second = "二"
+            case third = "三"
+            case fourth = "四"
+        }
+        
+        extension Section {
+            var localizedRawValue: String {
+                switch self {
+                case .first:
+                    return #Localized("一")
+                case .second:
+                    return #Localized("二")
+                case .third:
+                    return #Localized("三")
+                case .fourth:
+                    return #Localized("四")
+                }
+            }
+        }
+        """,
+        macros: testMacros
+        )
+    }
+    
     func testMacroWithStringLiteral() throws {
         #if canImport(OOGMacros)
         assertMacroExpansion(

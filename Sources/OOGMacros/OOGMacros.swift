@@ -8,6 +8,8 @@ struct OOGMacroKitsPlugin: CompilerPlugin {
         URLMacro.self,
         FileURLMacro.self,
         LocalizedMacro.self,
+        EnumLocalizedMacro.self,
+        EnumStringLocalizedMacro.self,
         
         MoyaConfigMacro.self,
         MoyaPathMacro.self,
