@@ -24,13 +24,13 @@ public macro URL(_ value: String) -> URL? = #externalMacro(module: "OOGMacros", 
 @freestanding(expression)
 public macro FileURL(_ value: String) -> URL = #externalMacro(module: "OOGMacros", type: "FileURLMacro")
 
-@attached(extension, names: arbitrary)
+@attached(member)
 public macro EnumLocalized(_ name: String) = #externalMacro(
     module: "OOGMacros",
     type: "EnumLocalizedMacro"
 )
 
-@attached(extension, names: arbitrary)
+@attached(member)
 public macro EnumStringLocalized() = #externalMacro(
     module: "OOGMacros",
     type: "EnumStringLocalizedMacro"
