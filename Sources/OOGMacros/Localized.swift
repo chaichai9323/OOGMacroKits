@@ -117,23 +117,21 @@ public struct EnumLocalizedMacro: MemberMacro {
 
         let capname = varName.prefix(1).uppercased() + varName.dropFirst()
 
-        let res = items.compactMap{ (k, v) in
-            """
-case \(k):\n    return #Localized("\(v)")
-"""
-        }.joined(separator: "\n")
-        
-        let body =
-        """
-        var localized\(capname): String {
-            switch self {
-            \(res)
+        let syn = try VariableDeclSyntax(
+            "var localized\(raw: capname): String"
+        ) {
+            try SwitchExprSyntax("switch self") {
+                for (k, v) in items {
+                    SwitchCaseSyntax(
+                        """
+                        case \(raw: k):
+                            return #Localized(\(literal: v))
+                        """
+                    )
+                }
             }
         }
-        """
-        return [
-            DeclSyntax("\(raw: body)")
-        ]
+        return [DeclSyntax(syn)]
     }
 }
 
@@ -169,23 +167,18 @@ public struct EnumStringLocalizedMacro: MemberMacro {
                 }
             }
         
-        let res = items.compactMap{ (k, v) in
-            """
-case .\(k):
-    return #Localized("\(v)")
-"""
-        }.joined(separator: "\n")
-        
-        let body =
-        """
-        var localizedRawValue: String {
-            switch self {
-            \(res)
+        let syn = try VariableDeclSyntax("var localizedRawValue: String") {
+            try SwitchExprSyntax("switch self") {
+                for (k, v) in items {
+                    SwitchCaseSyntax(
+                        """
+                        case .\(raw: k): 
+                            return #Localized(\(literal: v))
+                        """
+                    )
+                }
             }
         }
-        """
-        return [
-            DeclSyntax("\(raw: body)")
-        ]
+        return [DeclSyntax(syn)]
     }
 }
