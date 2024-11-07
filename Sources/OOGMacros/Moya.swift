@@ -84,6 +84,66 @@ fileprivate struct MemberManager {
         return ""
     }
     
+    var bindModel: String? {
+        let m = atts.first{ $0.name == "MoyaModelBinding" }?.args
+        guard let bindList = m,
+              let type = bindList.first,
+              type.hasSuffix(".self") else {
+            return nil
+        }
+        let returnType = type.replacingOccurrences(of: ".self", with: "")
+        
+        let isArray: Bool
+        if returnType.hasPrefix("["),
+           returnType.hasPrefix("]") {
+            isArray = true
+        } else {
+            isArray = false
+        }
+        let isOrigin: Bool
+        if bindList.count > 1 {
+            isOrigin = bindList[1] == "true"
+        } else {
+            isOrigin = false
+        }
+       
+        let T: String
+        let TType: String
+        if isArray {
+            T = "[\(returnType)]"
+            TType = "[\(returnType)].self"
+        } else {
+            T = "\(returnType)"
+            TType = "\(returnType).self"
+        }
+        let vName = name.prefix(1).uppercased() + name.dropFirst()
+        let reqParam = param?.map{
+            "\($0.name): \($0.type)"
+        }.joined(
+            separator: " ,"
+        ) ?? ""
+        let initParam = param?.map {
+            "\($0.name): \($0.name)"
+        }.joined(
+            separator: " ,"
+        ) ?? ""
+        let initMethod: String
+        if isOrigin {
+            initMethod = "request"
+        } else {
+            if isArray {
+                initMethod = "requestModelList"
+            } else {
+                initMethod = "requestModel"
+            }
+        }
+        return """
+        static func request\(vName)(\(reqParam)) async throws -> \(T) {
+            return try await Self.\(name)(\(initParam)).\(initMethod)(\(TType))
+        }
+        """
+    }
+    
     var bodyPath: String? {
         let p = pathContent
         
@@ -269,6 +329,10 @@ private static let provider: OOGMoyaProvider<Self> = .init(
             return nil
         }
         
+        let model = list.compactMap {
+            $0.bindModel
+        }.joined(separator: "\n    ")
+        
         let path = list.compactMap { $0.bodyPath }.joined(separator: "\n    ")
         
         let method = list.compactMap{ $0.bodyMethod }.joined(separator: "\n    ")
@@ -278,6 +342,8 @@ private static let provider: OOGMoyaProvider<Self> = .init(
         let params = list.compactMap{$0.bodyParams}.joined(separator: "\n    ")
         
         return """
+
+\(model)
 
 var path: String {
     switch self {
@@ -420,6 +486,13 @@ public struct MoyaPluginMacro: PeerMacro {
 }
 
 public struct MoyaMethodMacro: PeerMacro {
+    public static func expansion(of node: SwiftSyntax.AttributeSyntax, providingPeersOf declaration: some SwiftSyntax.DeclSyntaxProtocol, in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.DeclSyntax] {
+
+        return []
+    }
+}
+
+public struct MoyaModelBindingMacro: PeerMacro {
     public static func expansion(of node: SwiftSyntax.AttributeSyntax, providingPeersOf declaration: some SwiftSyntax.DeclSyntaxProtocol, in context: some SwiftSyntaxMacros.MacroExpansionContext) throws -> [SwiftSyntax.DeclSyntax] {
 
         return []
