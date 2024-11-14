@@ -34,6 +34,7 @@ let package = Package(
         .testTarget(
             name: "OOGMacroKitsTests",
             dependencies: [
+                "OOGMacroKits",
                 "OOGMacros",
                 .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
             ]

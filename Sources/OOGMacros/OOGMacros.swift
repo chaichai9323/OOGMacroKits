@@ -16,6 +16,7 @@ struct OOGMacroKitsPlugin: CompilerPlugin {
         MoyaURLMacro.self,
         MoyaPluginMacro.self,
         MoyaMethodMacro.self,
-        MoyaModelBindingMacro.self
+        MoyaModelBindingMacro.self,
+        ClonableMacro.self
     ]
 }
