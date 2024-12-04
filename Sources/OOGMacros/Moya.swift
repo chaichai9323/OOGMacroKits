@@ -95,7 +95,7 @@ fileprivate struct MemberManager {
         
         let isArray: Bool
         if returnType.hasPrefix("["),
-           returnType.hasPrefix("]") {
+           returnType.hasSuffix("]") {
             isArray = true
         } else {
             isArray = false
@@ -107,13 +107,16 @@ fileprivate struct MemberManager {
             isOrigin = false
         }
        
-        let T: String
         let TType: String
-        if isArray {
-            T = "[\(returnType)]"
-            TType = "[\(returnType)].self"
+        if isArray, !isOrigin {
+            TType = returnType.replacingOccurrences(
+                of: "[",
+                with: ""
+            ).replacingOccurrences(
+                of: "]",
+                with: ""
+            ) + ".self"
         } else {
-            T = "\(returnType)"
             TType = "\(returnType).self"
         }
         let vName = name.prefix(1).uppercased() + name.dropFirst()
@@ -122,11 +125,17 @@ fileprivate struct MemberManager {
         }.joined(
             separator: " ,"
         ) ?? ""
-        let initParam = param?.map {
+        let tmpParams = param?.map {
             "\($0.name): \($0.name)"
         }.joined(
             separator: " ,"
-        ) ?? ""
+        )
+        let initParam: String
+        if let s = tmpParams {
+            initParam = "(\(s))"
+        } else {
+            initParam = ""
+        }
         let initMethod: String
         if isOrigin {
             initMethod = "request"
@@ -138,8 +147,8 @@ fileprivate struct MemberManager {
             }
         }
         return """
-        static func request\(vName)(\(reqParam)) async throws -> \(T) {
-            return try await Self.\(name)(\(initParam)).\(initMethod)(\(TType))
+        static func request\(vName)(\(reqParam)) async throws -> \(returnType) {
+            return try await Self.\(name)\(initParam).\(initMethod)(\(TType))
         }
         """
     }
