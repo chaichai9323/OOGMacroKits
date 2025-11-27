@@ -8,6 +8,37 @@ import XCTest
 import OOGMacros
 import OOGMacroKits
 
+@EnumLocalized("title", "name", "address")
+enum Section {
+    case first
+    case second
+    case third
+
+    var title: String {
+        switch self {
+        case .first: "first"
+        case .second: "second"
+        case .third: "third"
+        }
+    }
+    var name: String {
+        switch self {
+        case .first, .second:
+            "firstName"
+        default: 
+            "thirdName"
+        }
+    }
+    
+    var address: String {
+        switch self {
+        case .first, .second: 
+            return "firstAddress"
+        default: return "thirdAddress"
+        }
+    }
+}
+
 final class OOGMacroKitsTests: XCTestCase {
     
     func testURL() {
@@ -23,6 +54,73 @@ final class OOGMacroKitsTests: XCTestCase {
         }
     }
 
+    func testMultiLocalizedMacro() throws {
+        assertMacroExpansion(
+        """
+        @EnumLocalized("title", "name", "address")
+        enum Section: String {
+            case first
+            case second
+            case third
+        
+            var title: String {
+                switch self {
+                case .first: "first"
+                case .second: "second"
+                case .third: "third"
+                }
+            }
+            var name: String {
+                switch self {
+                case .first, 
+                     .second:
+                    "firstName"
+                default: "thirdName"
+                }
+            }
+            var address: String {
+                switch self {
+                case .first, .second: return "firstAddress"
+                default: return "thirdAddress"
+                }
+            }
+        }
+        """,
+        expandedSource:
+        """
+        enum Section: String {
+            case first
+            case second
+            case third
+
+            var title: String {
+                switch self {
+                case .first: "first"
+                case .second: "second"
+                case .third: "third"
+                }
+            }
+            var name: String {
+                switch self {
+                case .first: "firstName"
+                case .second: "secondName"
+                case .third: "thirdName"
+                }
+            }
+            var address: String {
+                switch self {
+                case .first: "firstAddress"
+                case .second: "secondAddress"
+                case .third: "thirdAddress"
+                }
+            }
+        }
+        """,
+        macros: [
+            "EnumLocalized": EnumLocalizedMacro.self]
+        )
+    }
+    
     func testLocalizedMacro() throws {
         assertMacroExpansion(
         """

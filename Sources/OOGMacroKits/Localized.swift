@@ -14,7 +14,7 @@ public macro Localized(_ value: String) -> String = #externalMacro(
 
 /// 给枚举添加 localized[name] 属性
 @attached(member, names: arbitrary)
-public macro EnumLocalized(_ name: String) = #externalMacro(
+public macro EnumLocalized(_ name: String ...) = #externalMacro(
     module: "OOGMacros",
     type: "EnumLocalizedMacro"
 )

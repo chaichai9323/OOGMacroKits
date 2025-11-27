@@ -44,9 +44,7 @@ public struct EnumLocalizedMacro: MemberMacro {
             throw EnumLocalizedError.onlyEnumSupport
         }
         
-        let enumName = enumDec.name.text
-        
-        let param = enumDec.attributes
+        let exprList = enumDec.attributes
             .compactMap{
                 $0.as(AttributeSyntax.self)
             }.first {
@@ -57,81 +55,42 @@ public struct EnumLocalizedMacro: MemberMacro {
                 }
                 return true
             }?
-            .arguments?.as(LabeledExprListSyntax.self)?
-            .first?
-            .expression.as(StringLiteralExprSyntax.self)?
-            .segments
-            .first?.as(StringSegmentSyntax.self)?
-            .content.tokenKind
-        
-        let varName: String
-        switch param {
-        case .stringSegment(let name):
-            varName = name
-        default:
+            .arguments?
+            .as(LabeledExprListSyntax.self)
+        guard let args = exprList else {
+            return []
+        }
+        let params = args.compactMap { lab -> String? in
+                guard let exp = lab.expression.as(StringLiteralExprSyntax.self),
+                    let param = exp.segments.first?.as(StringSegmentSyntax.self) else {
+                    return nil
+                }
+                return param.content.text
+            }
+        guard params.count > 0 else {
             throw EnumLocalizedError.paramNotFound
         }
         
-        let def = enumDec.memberBlock
-            .members
-            .compactMap { mem -> PatternBindingSyntax? in
-                guard let dec = mem.decl.as(VariableDeclSyntax.self),
-                      dec.bindingSpecifier.tokenKind == .keyword(.var) else {
-                    return nil
-                }
-                
-                guard let res = dec.bindings.first?.as(PatternBindingSyntax.self),
-                      res.pattern
-                    .as(IdentifierPatternSyntax.self)?.identifier.text == varName,
-                      res.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name.text == "String" else {
-                    return nil
-                }
-                return res
-            }.first
-        
-        guard let enumVar = def else {
-            throw EnumLocalizedError.accessorNotFound(name: varName)
-        }
-
-        guard let code = enumVar.accessorBlock?.accessors.as(CodeBlockItemListSyntax.self)?.first?.item.as(ExpressionStmtSyntax.self)?.expression.as(SwitchExprSyntax.self)?.cases else {
-            throw EnumLocalizedError.accessorNotImplement(name: varName)
-        }
-        
-        let items = code.compactMap {
-            $0.as(SwitchCaseSyntax.self)
-        }.compactMap { item -> (String, String)? in
-            guard let lab = item.label.as(SwitchCaseLabelSyntax.self) else {
-                return nil
+        return try params.compactMap { varName -> VariableDeclSyntax? in
+            guard let enumVar = findVar(
+                enumDec,
+                name: varName
+            ), let code = findCode(
+                enumVar
+            ) else {
+                throw EnumLocalizedError.accessorNotFound(name: varName)
             }
-            let key = lab.caseItems.description
-            let vaule = item.statements.first?.item
-            if let r = vaule?.as(ReturnStmtSyntax.self),
-               let e = r.expression?.as(StringLiteralExprSyntax.self) {
-                return (key, e.segments.description)
-            } else if let s = vaule?.as(StringLiteralExprSyntax.self) {
-                return (key, s.segments.description)
-            } else {
-                return nil
+            let defaults = parseDefauleCode(code)
+            let items = parseCode(code)
+            guard items.count > 0 || defaults != nil  else {
+                throw EnumLocalizedError.accessorNotImplement(name: varName)
             }
-        }
-
-        let capname = varName.prefix(1).uppercased() + varName.dropFirst()
-
-        let syn = try VariableDeclSyntax(
-            "var localized\(raw: capname): String"
-        ) {
-            try SwitchExprSyntax("switch self") {
-                for (k, v) in items {
-                    SwitchCaseSyntax(
-                        """
-                        case \(raw: k):
-                            return #Localized(\(literal: v))
-                        """
-                    )
-                }
-            }
-        }
-        return [DeclSyntax(syn)]
+            return try generateCode(
+                name: varName,
+                items: items,
+                default: defaults
+            )
+        }.map { DeclSyntax($0) }
     }
 }
 
@@ -180,5 +139,118 @@ public struct EnumStringLocalizedMacro: MemberMacro {
             }
         }
         return [DeclSyntax(syn)]
+    }
+}
+
+
+fileprivate func findVar(_ delc: EnumDeclSyntax, name: String) -> PatternBindingSyntax? {
+    return delc.memberBlock
+        .members
+        .compactMap { mem -> PatternBindingSyntax? in
+            guard let dec = mem.decl.as(VariableDeclSyntax.self),
+                  dec.bindingSpecifier.tokenKind == .keyword(.var) else {
+                return nil
+            }
+            
+            guard let res = dec.bindings.first?.as(PatternBindingSyntax.self),
+                  res.pattern
+                .as(IdentifierPatternSyntax.self)?.identifier.text == name,
+                  res.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name.text == "String" else {
+                return nil
+            }
+            return res
+        }
+        .first
+}
+
+fileprivate func findCode(_ synx: PatternBindingSyntax) -> SwitchCaseListSyntax? {
+    return synx.accessorBlock?.accessors.as(CodeBlockItemListSyntax.self)?.first?.item.as(ExpressionStmtSyntax.self)?.expression.as(SwitchExprSyntax.self)?.cases
+}
+
+fileprivate func parseDefauleCode(
+    _ synx: SwitchCaseListSyntax
+) -> String? {
+    let lab = synx.compactMap {
+        $0.as(SwitchCaseSyntax.self)
+    }.first { lab in
+        lab.label.is(SwitchDefaultLabelSyntax.self)
+    }?.statements
+        .first?
+        .item
+    
+    if let r = lab?.as(ReturnStmtSyntax.self),
+       let e = r.expression?.as(StringLiteralExprSyntax.self),
+       let a = e.segments.first?.as(StringSegmentSyntax.self) {
+        return a.content.text
+    } else if let s = lab?.as(StringLiteralExprSyntax.self),
+              let a = s.segments.first?.as(StringSegmentSyntax.self) {
+        return a.content.text
+    } else {
+        return nil
+    }
+}
+
+fileprivate func parseCode(
+    _ synx: SwitchCaseListSyntax
+) -> [([String], String)] {
+    
+    return synx.compactMap {
+        $0.as(SwitchCaseSyntax.self)
+    }.compactMap { item -> ([String], String)? in
+        guard let lab = item.label.as(SwitchCaseLabelSyntax.self) else {
+            return nil
+        }
+        let keys = lab.caseItems.compactMap {
+            $0.pattern
+                .as(ExpressionPatternSyntax.self)?
+                .expression
+                .as(MemberAccessExprSyntax.self)?
+                .declName
+                .baseName
+                .text
+        }.map { "." + $0 }
+        
+        let vaule = item.statements.first?.item
+        if let r = vaule?.as(ReturnStmtSyntax.self),
+           let e = r.expression?.as(StringLiteralExprSyntax.self),
+           let a = e.segments.first?.as(StringSegmentSyntax.self) {
+            return (keys, a.content.text)
+        } else if let s = vaule?.as(StringLiteralExprSyntax.self),
+                  let a = s.segments.first?.as(StringSegmentSyntax.self) {
+            return (keys, a.content.text)
+        } else {
+            return nil
+        }
+    }
+}
+
+fileprivate func generateCode(
+    name: String,
+    items: [([String], String)],
+    default des: String? = nil
+) throws -> VariableDeclSyntax {
+    let capname = name.prefix(1).uppercased() + name.dropFirst()
+    return try VariableDeclSyntax(
+        "var localized\(raw: capname): String"
+    ) {
+        try SwitchExprSyntax("switch self") {
+            for (k, v) in items {
+                let keys = k.joined(separator: ", ")
+                SwitchCaseSyntax(
+                    """
+                    case \(raw: keys):
+                        return #Localized(\(literal: v))
+                    """
+                )
+            }
+            if let d = des {
+                SwitchCaseSyntax(
+                    """
+                    default :
+                        return #Localized(\(literal: d))
+                    """
+                )
+            }
+        }
     }
 }
